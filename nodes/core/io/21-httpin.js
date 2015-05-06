@@ -50,6 +50,7 @@ module.exports = function(RED) {
 
             this.url = n.url;
             this.method = n.method;
+			this.swaggerDoc = n.swaggerDoc;
 
             var node = this;
 
@@ -148,6 +149,8 @@ module.exports = function(RED) {
                         var len;
                         if (msg.payload == null) {
                             len = 0;
+                        } else if (Buffer.isBuffer(msg.payload)) {
+                            len = msg.payload.length;
                         } else if (typeof msg.payload == "number") {
                             len = Buffer.byteLength(""+msg.payload);
                         } else {

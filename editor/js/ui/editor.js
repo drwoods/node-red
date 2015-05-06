@@ -379,6 +379,32 @@ RED.editor = (function() {
         }
         input.val(label);
     }
+    
+    /**
+     * Create a config-node button for this property
+     * @param node - the node being edited
+     * @param property - the name of the field
+     * @param type - the type of the config-node
+     */
+    function prepareConfigNodeButton(node,property,type) {
+        var input = $("#node-input-"+property);
+        input.val(node[property]);
+        input.attr("type","hidden");
+        
+        var button = $("<a>",{id:"node-input-edit-"+property, class:"btn"});
+        input.after(button);
+        
+        if (node[property]) {
+            button.text("edit");
+        } else {
+            button.text("add");
+        }
+        
+        button.click(function(e) {
+            showEditConfigNodeDialog(property,type,input.val()||"_ADD_");
+            e.preventDefault();     
+        });
+    }
 
     /**
      * Populate the editor dialog input field for this property
@@ -493,7 +519,11 @@ RED.editor = (function() {
         for (var d in definition.defaults) {
             if (definition.defaults.hasOwnProperty(d)) {
                 if (definition.defaults[d].type) {
-                    prepareConfigNodeSelect(node,d,definition.defaults[d].type);
+                    if (definition.defaults[d].exclusive) {
+                        prepareConfigNodeButton(node,d,definition.defaults[d].type);
+                    } else {
+                        prepareConfigNodeSelect(node,d,definition.defaults[d].type);
+                    }
                 } else {
                     preparePropertyEditor(node,d,prefix);
                 }
@@ -633,25 +663,36 @@ RED.editor = (function() {
             .dialog("option","title",(adding?"Add new ":"Edit ")+type+" config node")
             .dialog( "open" );
     }
-
+    
     function updateConfigNodeSelect(name,type,value) {
-        var select = $("#node-input-"+name);
-        var node_def = RED.nodes.getType(type);
-        select.children().remove();
-        RED.nodes.eachConfig(function(config) {
-            if (config.type == type) {
-                var label = "";
-                if (typeof node_def.label == "function") {
-                    label = node_def.label.call(config);
-                } else {
-                    label = node_def.label;
-                }
-                select.append('<option value="'+config.id+'"'+(value==config.id?" selected":"")+'>'+label+'</option>');
+        var button = $("#node-input-edit-"+name);
+        if (button.length) {
+            if (value) {
+                button.text("edit");
+            } else {
+                button.text("add");
             }
-        });
-
-        select.append('<option value="_ADD_"'+(value===""?" selected":"")+'>Add new '+type+'...</option>');
-        window.setTimeout(function() { select.change();},50);
+            $("#node-input-"+name).val(value);
+        } else {
+            
+            var select = $("#node-input-"+name);
+            var node_def = RED.nodes.getType(type);
+            select.children().remove();
+            RED.nodes.eachConfig(function(config) {
+                if (config.type == type) {
+                    var label = "";
+                    if (typeof node_def.label == "function") {
+                        label = node_def.label.call(config);
+                    } else {
+                        label = node_def.label;
+                    }
+                    select.append('<option value="'+config.id+'"'+(value==config.id?" selected":"")+'>'+label+'</option>');
+                }
+            });
+    
+            select.append('<option value="_ADD_"'+(value===""?" selected":"")+'>Add new '+type+'...</option>');
+            window.setTimeout(function() { select.change();},50);
+        }
     }
 
     $( "#node-config-dialog" ).dialog({
@@ -673,12 +714,18 @@ RED.editor = (function() {
                         var configTypeDef = RED.nodes.getType(configType);
                         var configNode;
                         var d;
+                        var input;
                         
                         if (configAdding) {
                             configNode = {type:configType,id:configId,users:[]};
                             for (d in configTypeDef.defaults) {
                                 if (configTypeDef.defaults.hasOwnProperty(d)) {
-                                    configNode[d] = $("#node-config-input-"+d).val();
+                                    input = $("#node-config-input-"+d);
+                                    if (input.attr('type') === "checkbox") {
+                                      configNode[d] = input.prop('checked');
+                                    } else {
+                                      configNode[d] = input.val();
+                                    }
                                 }
                             }
                             configNode.label = configTypeDef.label;
@@ -689,7 +736,7 @@ RED.editor = (function() {
                             configNode = RED.nodes.node(configId);
                             for (d in configTypeDef.defaults) {
                                 if (configTypeDef.defaults.hasOwnProperty(d)) {
-                                    var input = $("#node-config-input-"+d);
+                                    input = $("#node-config-input-"+d);
                                     if (input.attr('type') === "checkbox") {
                                       configNode[d] = input.prop('checked');
                                     } else {
