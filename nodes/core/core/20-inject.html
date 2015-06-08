@@ -159,12 +159,14 @@
     <p>The payload defaults to the current time in millisecs since 1970, but can
        also be set to a String or left blank.</p>
     <p>The repeat function allows the payload to be sent on the required schedule.</p>
-    <p>The Fire once at start option actually waits a short interval before firing
+    <p>The <i>Fire once at start</i> option actually waits a short interval before firing
        to give other nodes a chance to instantiate properly.</p>
     <p><b>Note: </b>"Interval between times" and "at a specific time" uses cron.
        This means that 20 minutes will be at the next hour, 20 minutes past and
        40 minutes past - not in 20 minutes time. If you want every 20 minutes
        from now - use the "interval" option.</p>
+    <p><b>Note: </b>all string input is escaped. To add a carriage return to a string
+    you should use a following function.</p>
 </script>
 
 <script type="text/javascript">
@@ -221,7 +223,7 @@
                     $(this).append($("<option></option>").val(i).text(l));
                 }
             });
-            
+            $("<option></option>").val(24).text("00:00").appendTo("#inject-time-interval-time-end");
             $("#inject-time-interval-time-start").change(function() {
                 var start = Number($("#inject-time-interval-time-start option:selected").val());
                 var end = Number($("#inject-time-interval-time-end option:selected").val());
@@ -335,7 +337,7 @@
                             }
                         } else {
                             start = hours[0];
-                            end = (Number(hours[1])+1)%24;
+                            end = Number(hours[1])+1;
                         }
                     } else {
                         // 23,0 or 17-23,0-10 or 23,0-2 or 17-23,0
@@ -349,8 +351,8 @@
                             end = Number(endparts[1])+1;
                         }
                     }
-                    $("#inject-time-interval-time-start option").filter(function() {return $(this).val() == start;}).attr('selected',true);
                     $("#inject-time-interval-time-end option").filter(function() {return $(this).val() == end;}).attr('selected',true);
+                    $("#inject-time-interval-time-start option").filter(function() {return $(this).val() == start;}).attr('selected',true);
 
                 }
             } else {

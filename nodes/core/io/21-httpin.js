@@ -50,7 +50,7 @@ module.exports = function(RED) {
 
             this.url = n.url;
             this.method = n.method;
-			this.swaggerDoc = n.swaggerDoc;
+            this.swaggerDoc = n.swaggerDoc;
 
             var node = this;
 
@@ -60,12 +60,14 @@ module.exports = function(RED) {
             };
 
             this.callback = function(req,res) {
-                if (node.method == "post") {
-                    node.send({req:req,res:res,payload:req.body});
+                var msgid = RED.util.generateId();
+                res._msgid = msgid;
+                if (node.method.match(/(^post$|^delete$|^put$|^options$)/)) {
+                    node.send({_msgid:msgid,req:req,res:res,payload:req.body});
                 } else if (node.method == "get") {
-                    node.send({req:req,res:res,payload:req.query});
+                    node.send({_msgid:msgid,req:req,res:res,payload:req.query});
                 } else {
-                    node.send({req:req,res:res});
+                    node.send({_msgid:msgid,req:req,res:res});
                 }
             };
 
@@ -76,20 +78,28 @@ module.exports = function(RED) {
                 RED.httpNode.options(this.url,corsHandler);
             }
 
+            var httpMiddleware = function(req,res,next) { next(); }
+
+            if (RED.settings.httpNodeMiddleware) {
+                if (typeof RED.settings.httpNodeMiddleware === "function") {
+                    httpMiddleware = RED.settings.httpNodeMiddleware;
+                }
+            }
+
             var metricsHandler = function(req,res,next) { next(); }
 
             if (this.metric()) {
                 metricsHandler = function(req, res, next) {
                     var startAt = process.hrtime();
                     onHeaders(res, function() {
-                        if(res._msgId) {
+                        if (res._msgid) {
                             var diff = process.hrtime(startAt);
                             var ms = diff[0] * 1e3 + diff[1] * 1e-6;
                             var metricResponseTime = ms.toFixed(3);
                             var metricContentLength = res._headers["content-length"];
                             //assuming that _id has been set for res._metrics in HttpOut node!
-                            node.metric("response.time.millis", {_id:res._msgId} , metricResponseTime);
-                            node.metric("response.content-length.bytes", {_id:res._msgId} , metricContentLength);
+                            node.metric("response.time.millis", {_msgid:res._msgid} , metricResponseTime);
+                            node.metric("response.content-length.bytes", {_msgid:res._msgid} , metricContentLength);
                         }
                     });
                     next();
@@ -97,13 +107,13 @@ module.exports = function(RED) {
             }
 
             if (this.method == "get") {
-                RED.httpNode.get(this.url,corsHandler,metricsHandler,this.callback,this.errorHandler);
+                RED.httpNode.get(this.url,httpMiddleware,corsHandler,metricsHandler,this.callback,this.errorHandler);
             } else if (this.method == "post") {
-                RED.httpNode.post(this.url,corsHandler,metricsHandler,jsonParser,urlencParser,rawBodyParser,this.callback,this.errorHandler);
+                RED.httpNode.post(this.url,httpMiddleware,corsHandler,metricsHandler,jsonParser,urlencParser,rawBodyParser,this.callback,this.errorHandler);
             } else if (this.method == "put") {
-                RED.httpNode.put(this.url,corsHandler,metricsHandler,jsonParser,urlencParser,rawBodyParser,this.callback,this.errorHandler);
+                RED.httpNode.put(this.url,httpMiddleware,corsHandler,metricsHandler,jsonParser,urlencParser,rawBodyParser,this.callback,this.errorHandler);
             } else if (this.method == "delete") {
-                RED.httpNode.delete(this.url,corsHandler,metricsHandler,this.callback,this.errorHandler);
+                RED.httpNode.delete(this.url,httpMiddleware,corsHandler,metricsHandler,jsonParser,urlencParser,rawBodyParser,this.callback,this.errorHandler);
             }
 
             this.on("close",function() {
@@ -159,7 +169,6 @@ module.exports = function(RED) {
                         msg.res.set('content-length', len);
                     }
 
-                    msg.res._msgId = msg._id;
                     msg.res.send(statusCode,msg.payload);
                 }
             } else {
@@ -177,6 +186,13 @@ module.exports = function(RED) {
         var nodeMethod = n.method || "GET";
         this.ret = n.ret || "txt";
         var node = this;
+
+        var prox, noprox;
+        if (process.env.http_proxy != null) { prox = process.env.http_proxy; }
+        if (process.env.HTTP_PROXY != null) { prox = process.env.HTTP_PROXY; }
+        if (process.env.no_proxy != null) { noprox = process.env.no_proxy.split(","); }
+        if (process.env.NO_PROXY != null) { noprox = process.env.NO_PROXY.split(","); }
+
         this.on("input",function(msg) {
             var preRequestTimestamp = process.hrtime();
             node.status({fill:"blue",shape:"dot",text:"requesting"});
@@ -192,7 +208,7 @@ module.exports = function(RED) {
                 return;
             }
             // url must start http:// or https:// so assume http:// if not set
-            if (!((url.indexOf("http://")===0) || (url.indexOf("https://")===0))) {
+            if (!((url.indexOf("http://") === 0) || (url.indexOf("https://") === 0))) {
                 url = "http://"+url;
             }
 
@@ -240,10 +256,38 @@ module.exports = function(RED) {
                     }
                 }
                 if (opts.headers['content-length'] == null) {
-                    opts.headers['content-length'] = Buffer.byteLength(payload);
+                    if (Buffer.isBuffer(payload)) {
+                        opts.headers['content-length'] = payload.length;
+                    } else {
+                        opts.headers['content-length'] = Buffer.byteLength(payload);
+                    }
                 }
             }
-            var req = ((/^https/.test(url))?https:http).request(opts,function(res) {
+            var urltotest = url;
+            var noproxy;
+            if (noprox) {
+                for (var i in noprox) {
+                    if (url.indexOf(noprox[i]) !== -1) { noproxy=true; }
+                }
+            }
+            if (prox && !noproxy) {
+                var match = prox.match(/^(http:\/\/)?(.+)?:([0-9]+)?/i);
+                if (match) {
+                    //opts.protocol = "http:";
+                    //opts.host = opts.hostname = match[2];
+                    //opts.port = (match[3] != null ? match[3] : 80);
+                    opts.headers['Host'] = opts.host;
+                    var heads = opts.headers;
+                    var path = opts.pathname = opts.href;
+                    opts = urllib.parse(prox);
+                    opts.path = opts.pathname = path;
+                    opts.headers = heads;
+                    //console.log(opts);
+                    urltotest = match[0];
+                }
+                else { node.warn("Bad proxy url: "+process.env.http_proxy); }
+            }
+            var req = ((/^https/.test(urltotest))?https:http).request(opts,function(res) {
                 (node.ret === "bin") ? res.setEncoding('binary') : res.setEncoding('utf8');
                 msg.statusCode = res.statusCode;
                 msg.headers = res.headers;
@@ -259,7 +303,7 @@ module.exports = function(RED) {
                         var ms = diff[0] * 1e3 + diff[1] * 1e-6;
                         var metricRequestDurationMillis = ms.toFixed(3);
                         node.metric("duration.millis", msg, metricRequestDurationMillis);
-                        if(res.client && res.client.bytesRead) {
+                        if (res.client && res.client.bytesRead) {
                             node.metric("size.bytes", msg, res.client.bytesRead);
                         }
                     }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013,2014 IBM Corp.
+ * Copyright 2013,2015 IBM Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,6 @@
 module.exports = function(RED) {
     "use strict";
     var ArduinoFirmata = require('arduino-firmata');
-    var fs = require('fs');
-    var portlist = ArduinoFirmata.list(function (err, ports) {
-        portlist = ports;
-    });
 
     // The Board Definition - this opens (and closes) the connection
     function ArduinoNode(n) {
@@ -30,15 +26,26 @@ module.exports = function(RED) {
         //node.log("opening connection "+this.device);
         var node = this;
         node.board = new ArduinoFirmata();
-        if (portlist.indexOf(node.device) === -1) {
-            node.error("device "+node.device+" not found");
-        }
-        else {
-            node.board.connect(node.device);
-        }
+        ArduinoFirmata.list(function (err, ports) {
+            if (!node.device) {
+                node.log("connecting to first board found.");
+                node.board.connect();
+            }
+            else {
+                if (ports.indexOf(node.device) === -1) {
+                    node.warn(node.device + " not found. Trying to find board.");
+                    node.board.connect();
+                }
+                else {
+                    node.log("connecting to "+node.device);
+                    node.board.connect(node.device);
+                }
+            }
 
-        node.board.on('boardReady', function(){
-            if (RED.settings.verbose) { node.log("version "+node.board.boardVersion); }
+            node.board.on('boardReady', function() {
+                node.log("connected to "+node.board.serialport_name);
+                if (RED.settings.verbose) { node.log("version "+node.board.boardVersion); }
+            });
         });
 
         node.on('close', function(done) {
