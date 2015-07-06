@@ -19,6 +19,7 @@ var fs = require("fs");
 var path = require("path");
 
 var events = require("../../events");
+var log = require("../../log");
 
 var settings;
 var defaultNodesDir = path.resolve(path.join(__dirname,"..","..","..","nodes"));
@@ -34,13 +35,19 @@ function init(_settings,_defaultNodesDir,_disableNodePathScan) {
     }
 }
 
-function getLocalFile(file) {
-    if (settings.nodesExcludes) {
+function isExcluded(name) {
+     if (settings.nodesExcludes) {
         for (var i=0;i<settings.nodesExcludes.length;i++) {
-            if (settings.nodesExcludes[i] == path.basename(file)) {
-                return null;
+            if (settings.nodesExcludes[i] == name) {
+                return true;
             }
         }
+    }
+    return false;
+}
+function getLocalFile(file) {
+    if (isExcluded(path.basename(file))) {
+        return null;
     }
     if (fs.existsSync(file.replace(/\.js$/,".html"))) {
         return {
@@ -81,7 +88,7 @@ function getLocalNodeFiles(dir) {
             }
         } else if (stats.isDirectory()) {
             // Ignore /.dirs/, /lib/ /node_modules/
-            if (!/^(\..*|lib|icons|node_modules|test)$/.test(fn)) {
+            if (!/^(\..*|lib|icons|node_modules|test|locales)$/.test(fn)) {
                 result = result.concat(getLocalNodeFiles(path.join(dir,fn)));
             } else if (fn === "icons") {
                 events.emit("node-icon-dir",path.join(dir,fn));
@@ -97,7 +104,7 @@ function scanDirForNodesModules(dir,moduleName) {
         var files = fs.readdirSync(dir);
         for (var i=0;i<files.length;i++) {
             var fn = files[i];
-            if (!moduleName || fn == moduleName) {
+            if (!isExcluded(fn) && (!moduleName || fn == moduleName)) {
                 var pkgfn = path.join(dir,fn,"package.json");
                 try {
                     var pkg = require(pkgfn);
@@ -190,6 +197,13 @@ function getNodeFiles(_defaultNodesDir,disableNodePathScan) {
     var nodeFiles = getLocalNodeFiles(path.resolve(defaultNodesDir));
     //console.log(nodeFiles);
     
+    var defaultLocalesPath = path.resolve(path.join(defaultNodesDir,"core","locales"));
+    events.emit("node-locales-dir", {
+        namespace:"node-red",
+        dir: defaultLocalesPath,
+        file: "messages.json"
+    });
+    
     if (settings.userDir) {
         dir = path.join(settings.userDir,"nodes");
         nodeFiles = nodeFiles.concat(getLocalNodeFiles(dir));
@@ -238,7 +252,7 @@ function getModuleFiles(module) {
     
     var moduleFiles = scanTreeForNodesModules(module);
     if (moduleFiles.length === 0) {
-        var err = new Error("Cannot find module '" + module + "'");
+        var err = new Error(log._("nodes.registry.localfilesystem.module-not-found", {module:module}));
         err.code = 'MODULE_NOT_FOUND';
         throw err;
     }

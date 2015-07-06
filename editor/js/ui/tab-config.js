@@ -14,23 +14,30 @@
  * limitations under the License.
  **/
 RED.sidebar.config = (function() {
-    
+
     var content = document.createElement("div");
-    content.id = "tab-config";
     content.style.paddingTop = "4px";
     content.style.paddingLeft = "4px";
     content.style.paddingRight = "4px";
-    
+
     var list = $("<ul>",{class:"tab-config-list"}).appendTo(content);
-    
+
+    function init() {
+        RED.sidebar.addTab({
+            id: "config",
+            label: RED._("sidebar.config.label"),
+            name: RED._("sidebar.config.name"),
+            content: content,
+            closeable: true,
+            visible: false,
+            onchange: function() { refresh(); }
+        });
+    }
     function show() {
-        if (!RED.sidebar.containsTab("config")) {
-            RED.sidebar.addTab("config",content,true);
-        }
         refresh();
         RED.sidebar.show("config");
     }
-    
+
     function refresh() {
         list.empty();
         RED.nodes.eachConfig(function(node) {
@@ -46,12 +53,12 @@ RED.sidebar.config = (function() {
                 label = node._def.label;
             }
             label = label || "&nbsp;";
-            
+
             var entry = $('<div class="tab-config-list-entry"></div>').appendTo(li);
             entry.on('dblclick',function(e) {
                 RED.editor.editConfig("", node.type, node.id);
             });
-            
+
             var userArray = node.users.map(function(n) { return n.id });
             entry.on('mouseover',function(e) {
                 RED.nodes.eachNode(function(node) {
@@ -72,12 +79,13 @@ RED.sidebar.config = (function() {
                 });
                 RED.view.redraw();
             });
-            
+
             $('<div class="tab-config-list-label">'+label+'</div>').appendTo(entry);
             $('<div class="tab-config-list-users">'+node.users.length+'</div>').appendTo(entry);
         });
     }
     return {
+        init:init,
         show:show,
         refresh:refresh
     }

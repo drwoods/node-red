@@ -27,17 +27,23 @@ RED.sidebar.info = (function() {
     });
 
     var content = document.createElement("div");
-    content.id = "tab-info";
     content.style.paddingTop = "4px";
     content.style.paddingLeft = "4px";
     content.style.paddingRight = "4px";
 
     var propertiesExpanded = false;
-    
+
+    function init() {
+        RED.sidebar.addTab({
+            id: "info",
+            label: RED._("sidebar.info.label"),
+            name: RED._("sidebar.info.name"),
+            content: content
+        });
+
+    }
+
     function show() {
-        if (!RED.sidebar.containsTab("info")) {
-            RED.sidebar.addTab("info",content,false);
-        }
         RED.sidebar.show("info");
     }
 
@@ -60,13 +66,13 @@ RED.sidebar.info = (function() {
 
     function refresh(node) {
         var table = '<table class="node-info"><tbody>';
-        table += '<tr class="blank"><td colspan="2">Node</td></tr>';
+        table += '<tr class="blank"><td colspan="2">'+RED._("sidebar.info.node")+'</td></tr>';
         if (node.type != "subflow" && node.name) {
-            table += "<tr><td>Name</td><td>&nbsp;"+node.name+"</td></tr>";
+            table += "<tr><td>"+RED._("common.label.name")+"</td><td>&nbsp;"+node.name+"</td></tr>";
         }
-        table += "<tr><td>Type</td><td>&nbsp;"+node.type+"</td></tr>";
-        table += "<tr><td>ID</td><td>&nbsp;"+node.id+"</td></tr>";
-        
+        table += "<tr><td>"+RED._("sidebar.info.type")+"</td><td>&nbsp;"+node.type+"</td></tr>";
+        table += "<tr><td>"+RED._("sidebar.info.id")+"</td><td>&nbsp;"+node.id+"</td></tr>";
+
         var m = /^subflow(:(.+))?$/.exec(node.type);
         if (m) {
             var subflowNode;
@@ -75,9 +81,9 @@ RED.sidebar.info = (function() {
             } else {
                 subflowNode = node;
             }
-            
-            table += '<tr class="blank"><td colspan="2">Subflow</td></tr>';
-            
+
+            table += '<tr class="blank"><td colspan="2">'+RED._("sidebar.info.subflow")+'</td></tr>';
+
             var userCount = 0;
             var subflowType = "subflow:"+subflowNode.id;
             RED.nodes.eachNode(function(n) {
@@ -85,12 +91,12 @@ RED.sidebar.info = (function() {
                     userCount++;
                 }
             });
-            table += "<tr><td>name</td><td>"+subflowNode.name+"</td></tr>";
-            table += "<tr><td>instances</td><td>"+userCount+"</td></tr>";
+            table += "<tr><td>"+RED._("common.label.name")+"</td><td>"+subflowNode.name+"</td></tr>";
+            table += "<tr><td>"+RED._("sidebar.info.instances")+"</td><td>"+userCount+"</td></tr>";
         }
-        
+
         if (!m && node.type != "subflow" && node.type != "comment") {
-            table += '<tr class="blank"><td colspan="2"><a href="#" class="node-info-property-header"><i style="width: 10px; text-align: center;" class="fa fa-caret-'+(propertiesExpanded?"down":"right")+'"></i> Properties</a></td></tr>';
+            table += '<tr class="blank"><td colspan="2"><a href="#" class="node-info-property-header"><i style="width: 10px; text-align: center;" class="fa fa-caret-'+(propertiesExpanded?"down":"right")+'"></i> '+RED._("sidebar.info.properties")+'</a></td></tr>';
             if (node._def) {
                 for (var n in node._def.defaults) {
                     if (n != "name" && node._def.defaults.hasOwnProperty(n)) {
@@ -98,7 +104,7 @@ RED.sidebar.info = (function() {
                         var type = typeof val;
                         if (type === "string") {
                             if (val.length === 0) {
-                                val += '<span style="font-style: italic; color: #ccc;">blank</span>';
+                                val += '<span style="font-style: italic; color: #ccc;">'+RED._("sidebar.info.blank")+'</span>';
                             } else {
                                 if (val.length > 30) {
                                     val = val.substring(0,30)+" ...";
@@ -114,14 +120,14 @@ RED.sidebar.info = (function() {
                                 val += "&nbsp;"+i+": "+vv+"<br/>";
                             }
                             if (node[n].length > 10) {
-                                val += "&nbsp;... "+node[n].length+" items<br/>";
+                                val += "&nbsp;... "+RED._("sidebar.info.arrayItems",{count:node[n].length})+"<br/>";
                             }
                             val += "]";
                         } else {
                             val = JSON.stringify(val,jsonFilter," ");
                             val = val.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
                         }
-    
+
                         table += '<tr class="node-info-property-row'+(propertiesExpanded?"":" hide")+'"><td>'+n+"</td><td>"+val+"</td></tr>";
                     }
                 }
@@ -139,8 +145,8 @@ RED.sidebar.info = (function() {
             //table += '<div class="node-help">'+(typeof info === "function" ? info.call(node) : info)+'</div>';
         }
 
-        $("#tab-info").html(table);
-        
+        $(content).html(table);
+
         $(".node-info-property-header").click(function(e) {
             var icon = $(this).find("i");
             if (icon.hasClass("fa-caret-right")) {
@@ -154,15 +160,15 @@ RED.sidebar.info = (function() {
                 $(".node-info-property-row").hide();
                 propertiesExpanded = false;
             }
-            
+
             e.preventDefault();
         });
     }
-    
+
     function clear() {
         $("#tab-info").html("");
     }
-    
+
     RED.view.on("selection-changed",function(selection) {
         if (selection.nodes) {
             if (selection.nodes.length == 1) {
@@ -184,6 +190,7 @@ RED.sidebar.info = (function() {
     });
 
     return {
+        init: init,
         show: show,
         refresh:refresh,
         clear: clear
