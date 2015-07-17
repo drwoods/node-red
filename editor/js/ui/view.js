@@ -243,7 +243,7 @@ RED.view = (function() {
     }
 
     function init() {
-        RED.workspaces.on("change",function(event) {
+        RED.events.on("workspace:change",function(event) {
             var chart = $("#chart");
             if (event.old !== 0) {
                 workspaceScrollPositions[event.old] = {
@@ -700,8 +700,7 @@ RED.view = (function() {
         if (selected_link != null) {
             selection.link = selected_link;
         }
-
-        eventHandler.emit("selection-changed",selection);
+        RED.events.emit("view:selection-changed",selection);
     }
 
     function endKeyboardMove() {
@@ -756,9 +755,10 @@ RED.view = (function() {
                     if (node.x < 0) {
                         node.x = 25
                     }
-                    var rmlinks = RED.nodes.remove(node.id);
+                    var removedEntities = RED.nodes.remove(node.id);
                     removedNodes.push(node);
-                    removedLinks = removedLinks.concat(rmlinks);
+                    removedNodes = removedNodes.concat(removedEntities.nodes);
+                    removedLinks = removedLinks.concat(removedEntities.links);
                 } else {
                     if (node.direction === "out") {
                         removedSubflowOutputs.push(node);
@@ -851,8 +851,21 @@ RED.view = (function() {
             var nns = [];
             for (var n=0;n<moving_set.length;n++) {
                 var node = moving_set[n].n;
+                // The only time a node.type == subflow can be selected is the
+                // input/output 'proxy' nodes. They cannot be copied.
                 if (node.type != "subflow") {
+                    for (var d in node._def.defaults) {
+                        if (node._def.defaults.hasOwnProperty(d)) {
+                            if (node._def.defaults[d].type) {
+                                var configNode = RED.nodes.node(node[d]);
+                                if (configNode && configNode._def.exclusive) {
+                                    nns.push(RED.nodes.convertNode(configNode));
+                                }
+                            }
+                        }
+                    }
                     nns.push(RED.nodes.convertNode(node));
+                    //TODO: if the node has an exclusive config node, it should also be copied, to ensure it remains exclusive...
                 }
             }
             clipboard = JSON.stringify(nns);
@@ -1211,17 +1224,17 @@ RED.view = (function() {
                             .attr("transform",function(d) { return "translate("+((d._def.align == "right") ? 94 : -25)+",2)"; })
                             .attr("class",function(d) { return "node_button "+((d._def.align == "right") ? "node_right_button" : "node_left_button"); });
                         nodeButtonGroup.append('rect')
-                            .attr("rx",8)
-                            .attr("ry",8)
+                            .attr("rx",5)
+                            .attr("ry",5)
                             .attr("width",32)
                             .attr("height",node_height-4)
                             .attr("fill","#eee");//function(d) { return d._def.color;})
                         nodeButtonGroup.append('rect')
                             .attr("class","node_button_button")
-                            .attr("x",function(d) { return d._def.align == "right"? 10:5})
+                            .attr("x",function(d) { return d._def.align == "right"? 11:5})
                             .attr("y",4)
-                            .attr("rx",5)
-                            .attr("ry",5)
+                            .attr("rx",4)
+                            .attr("ry",4)
                             .attr("width",16)
                             .attr("height",node_height-12)
                             .attr("fill",function(d) { return d._def.color;})
@@ -1243,8 +1256,8 @@ RED.view = (function() {
                     var mainRect = node.append("rect")
                         .attr("class", "node")
                         .classed("node_unknown",function(d) { return d.type == "unknown"; })
-                        .attr("rx", 6)
-                        .attr("ry", 6)
+                        .attr("rx", 5)
+                        .attr("ry", 5)
                         .attr("fill",function(d) { return d._def.color;})
                         .on("mouseup",nodeMouseUp)
                         .on("mousedown",nodeMouseDown)
@@ -1309,7 +1322,7 @@ RED.view = (function() {
                             .attr("class","node_icon_shade_border")
                             .attr("stroke-opacity","0.1")
                             .attr("stroke","#000")
-                            .attr("stroke-width","2");
+                            .attr("stroke-width","1");
 
                         if ("right" == d._def.align) {
                             icon_group.attr('class','node_icon_group node_icon_group_'+d._def.align);
@@ -1754,36 +1767,15 @@ RED.view = (function() {
         } catch(error) {
             if (error.code != "NODE_RED") {
                 console.log(error.stack);
-                RED.notify(RED._("notification.error")+error,"error");
+                RED.notify(RED._("notification.error",{message:error.toString()}),"error");
             } else {
-                RED.notify(RED._("notification.error")+error.message,"error");
+                RED.notify(RED._("notification.error",{message:error.message}),"error");
             }
         }
     }
 
-    // TODO: DRY
-    var eventHandler = (function() {
-        var handlers = {};
-
-        return {
-            on: function(evt,func) {
-                handlers[evt] = handlers[evt]||[];
-                handlers[evt].push(func);
-            },
-            emit: function(evt,arg) {
-                if (handlers[evt]) {
-                    for (var i=0;i<handlers[evt].length;i++) {
-                        handlers[evt][i](arg);
-                    }
-
-                }
-            }
-        }
-    })();
-
     return {
         init: init,
-        on: eventHandler.on,
         state:function(state) {
             if (state == null) {
                 return mouse_mode

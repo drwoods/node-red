@@ -30,7 +30,8 @@ RED.sidebar = (function() {
             if (tab.onremove) {
                 tab.onremove.call(tab);
             }
-        }
+        },
+        minimumActiveTabWidth: 110
     });
 
     var knownTabs = {
@@ -64,7 +65,8 @@ RED.sidebar = (function() {
             label:options.name,
             onselect:function() {
                 showSidebar(options.id);
-            }
+            },
+            group: "sidebar-tabs"
         });
 
         knownTabs[options.id] = options;
@@ -95,13 +97,12 @@ RED.sidebar = (function() {
 
                 if (!RED.menu.isSelected("menu-item-sidebar")) {
                     sidebarSeparator.opening = true;
-                    var newChartRight = 15;
+                    var newChartRight = 7;
                     $("#sidebar").addClass("closing");
                     $("#workspace").css("right",newChartRight);
-                    $("#chart-zoom-controls").css("right",newChartRight+20);
                     $("#sidebar").width(0);
                     RED.menu.setSelected("menu-item-sidebar",true);
-                    eventHandler.emit("resize");
+                    RED.events.emit("sidebar:resize");
                 }
                 sidebarSeparator.width = $("#sidebar").width();
             },
@@ -109,7 +110,7 @@ RED.sidebar = (function() {
                 var d = ui.position.left-sidebarSeparator.start;
                 var newSidebarWidth = sidebarSeparator.width-d;
                 if (sidebarSeparator.opening) {
-                    newSidebarWidth -= 13;
+                    newSidebarWidth -= 3;
                 }
 
                 if (newSidebarWidth > 150) {
@@ -137,11 +138,10 @@ RED.sidebar = (function() {
 
                 var newChartRight = sidebarSeparator.chartRight-d;
                 $("#workspace").css("right",newChartRight);
-                $("#chart-zoom-controls").css("right",newChartRight+20);
                 $("#sidebar").width(newSidebarWidth);
 
                 sidebar_tabs.resize();
-                eventHandler.emit("resize");
+                RED.events.emit("sidebar:resize");
             },
             stop:function(event,ui) {
                 if (sidebarSeparator.closing) {
@@ -149,13 +149,12 @@ RED.sidebar = (function() {
                     RED.menu.setSelected("menu-item-sidebar",false);
                     if ($("#sidebar").width() < 180) {
                         $("#sidebar").width(180);
-                        $("#workspace").css("right",208);
-                        $("#chart-zoom-controls").css("right",228);
+                        $("#workspace").css("right",187);
                     }
                 }
                 $("#sidebar-separator").css("left","auto");
-                $("#sidebar-separator").css("right",($("#sidebar").width()+13)+"px");
-                eventHandler.emit("resize");
+                $("#sidebar-separator").css("right",($("#sidebar").width()+2)+"px");
+                RED.events.emit("sidebar:resize");
             }
     });
 
@@ -166,7 +165,7 @@ RED.sidebar = (function() {
             $("#main-container").removeClass("sidebar-closed");
             sidebar_tabs.resize();
         }
-        eventHandler.emit("resize");
+        RED.events.emit("sidebar:resize");
     }
 
     function showSidebar(id) {
@@ -194,25 +193,6 @@ RED.sidebar = (function() {
         if ($(window).width() < 600) { toggleSidebar(); }
     }
 
-    var eventHandler = (function() {
-        var handlers = {};
-
-        return {
-            on: function(evt,func) {
-                handlers[evt] = handlers[evt]||[];
-                handlers[evt].push(func);
-            },
-            emit: function(evt,arg) {
-                if (handlers[evt]) {
-                    for (var i=0;i<handlers[evt].length;i++) {
-                        handlers[evt][i](arg);
-                    }
-
-                }
-            }
-        }
-    })();
-
     return {
         init: init,
         addTab: addTab,
@@ -220,7 +200,6 @@ RED.sidebar = (function() {
         show: showSidebar,
         containsTab: containsTab,
         toggleSidebar: toggleSidebar,
-        on: eventHandler.on
     }
 
 })();

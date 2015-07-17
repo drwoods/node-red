@@ -9,6 +9,7 @@
         }
     },
     "workspace": {
+        "defaultName": "Sheet __number__",
         "renameSheet": "Rename sheet",
         "confirmDelete": "Confirm delete",
         "delete": "Are you sure you want to delete '__label__'?",
@@ -153,7 +154,7 @@
     },
     "palette": {
         "noInfo": "no information available",
-        "filter": "filter",
+        "filter": "filter nodes",
         "label": {
             "subflows": "subflows",
             "input": "input",
@@ -177,7 +178,7 @@
     },
     "sidebar": {
         "info": {
-            "name": "Node Information",
+            "name": "Information",
             "label": "info",
             "node": "Node",
             "type": "Type",

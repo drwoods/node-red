@@ -142,9 +142,9 @@ RED.library = (function() {
             return ul;
         }
 
-        $('#node-input-name').addClass('input-append-left').css("width","65%").after(
-            '<div class="btn-group" style="margin-left: 0px;">'+
-            '<button id="node-input-'+options.type+'-lookup" class="btn input-append-right" data-toggle="dropdown"><i class="fa fa-book"></i> <i class="fa fa-caret-down"></i></button>'+
+        $('#node-input-name').css("width","60%").after(
+            '<div class="btn-group" style="margin-left: 5px;">'+
+            '<a id="node-input-'+options.type+'-lookup" class="editor-button" data-toggle="dropdown"><i class="fa fa-book"></i> <i class="fa fa-caret-down"></i></a>'+
             '<ul class="dropdown-menu pull-right" role="menu">'+
             '<li><a id="node-input-'+options.type+'-menu-open-library" tabindex="-1" href="#">'+RED._("library.openLibrary")+'</a></li>'+
             '<li><a id="node-input-'+options.type+'-menu-save-library" tabindex="-1" href="#">'+RED._("library.saveToLibrary")+'</a></li>'+
@@ -329,7 +329,7 @@ RED.library = (function() {
             }).done(function(data,textStatus,xhr) {
                 RED.notify(RED._("library.savedType", {type:options.type}),"success");
             }).fail(function(xhr,textStatus,err) {
-                RED.notify(RED._("library.saveFailed",{message:xhr.responseJSON.message}),"error");
+                RED.notify(RED._("library.saveFailed",{message:xhr.responseText}),"error");
             });
         }
         $( "#node-dialog-library-save-confirm" ).dialog({
@@ -390,7 +390,7 @@ RED.library = (function() {
 
     return {
         init: function() {
-            RED.view.on("selection-changed",function(selection) {
+            RED.events.on("view:selection-changed",function(selection) {
                 if (!selection.nodes) {
                     RED.menu.setDisabled("menu-item-export",true);
                     RED.menu.setDisabled("menu-item-export-clipboard",true);

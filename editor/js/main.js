@@ -16,10 +16,6 @@
 var RED = (function() {
 
 
-    function loadLocales() {
-        RED.i18n.init(loadEditor);
-    }
-
     function loadNodeList() {
         $.ajax({
             headers: {
@@ -86,7 +82,7 @@ var RED = (function() {
                     var node = RED.nodes.node(parts[1]);
                     if (node) {
                         if (msg.text) {
-                            msg.text = node._(msg.text,{defaultValue:msg.text});
+                            msg.text = node._(msg.text.toString(),{defaultValue:msg.text.toString()});
                         }
                         node.status = msg;
                         if (statusEnabled) {
@@ -225,7 +221,9 @@ var RED = (function() {
 
         ace.require("ace/ext/language_tools");
 
-        RED.settings.init(loadLocales);
+        RED.i18n.init(function() {
+            RED.settings.init(loadEditor);
+        })
     });
 
 

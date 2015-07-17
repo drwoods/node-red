@@ -135,9 +135,9 @@
         "dropmsg": "drop intermediate messages",
         "label": {
             "delay": "delay",
-            "limitlabel": "limit",
-            "randomlabel": "ramdom",
-            "queuelabel": "queue"
+            "limit": "limit",
+            "random": "ramdom",
+            "queue": "queue"
         },
         "error": {
             "buffer": "buffer exceeded 1000 messages"
@@ -172,9 +172,7 @@
             "title": "Title",
             "body": "Body"
         },
-        "tip": "Tip: The text can be styled as <a href=\"https://help.github.com/articles/markdown-basics/\" target=\"_new\">Github flavoured Markdown</a>",
-        "defaulttitle": "Comment node",
-        "defaultinfo": "Use this node to add simple documentation.\n\nAnything you add will be rendered in this info panel.\n\nYou may use Markdown syntax to **enhance** the *presentation*."
+        "tip": "Tip: The text can be styled as <a href=\"https://help.github.com/articles/markdown-basics/\" target=\"_new\">Github flavoured Markdown</a>"
     },
     "unknown": {
         "label": {
@@ -582,6 +580,7 @@
             "filename": "Filename",
             "action": "Action",
             "addnewline": "Add newline (\\n) to each payload?",
+            "createdir": "Create directory if it doesn't exist?",
             "outputas": "Output as",
             "filelabel": "file",
             "deletelabel": "delete __file__"
@@ -605,7 +604,8 @@
             "invaliddelete": "Warning: Invalid delete. Please use specific delete option in config dialog.",
             "deletefail": "failed to delete file: __error__",
             "writefail": "failed to write to file: __error__",
-            "appendfail": "failed to append to file: __error__"
+            "appendfail": "failed to append to file: __error__",
+            "createfail": "failed to create file: __error__"
         }
     }
 }

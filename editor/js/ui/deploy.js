@@ -111,7 +111,7 @@ RED.deploy = (function() {
                 }
         });
 
-        RED.nodes.on('change',function(state) {
+        RED.events.on('nodes:change',function(state) {
             if (state.dirty) {
                 window.onbeforeunload = function() {
                     return RED._("deploy.confirm.undeployedChanges");
@@ -233,10 +233,11 @@ RED.deploy = (function() {
                 // Once deployed, cannot undo back to a clean state
                 RED.history.markAllDirty();
                 RED.view.redraw();
+                RED.events.emit("deploy");
             }).fail(function(xhr,textStatus,err) {
                 RED.nodes.dirty(true);
                 if (xhr.responseText) {
-                    RED.notify(RED._("notification.error",{message:xhr.responseJSON.message}),"error");
+                    RED.notify(RED._("notification.error",{message:xhr.responseText}),"error");
                 } else {
                     RED.notify(RED._("notification.error",{message:RED._("deploy.errors.noResponse")}),"error");
                 }

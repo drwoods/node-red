@@ -287,6 +287,8 @@ RED.editor = (function() {
                                     }).done(function() {
                                             RED.library.loadFlowLibrary();
                                             RED.notify(RED._("library.savedNodes"),"success");
+                                    }).fail(function(xhr,textStatus,err) {
+                                        RED.notify(RED._("library.saveFailed",{message:xhr.responseText}),"error");
                                     });
                                 }
                             }
@@ -362,7 +364,7 @@ RED.editor = (function() {
         input.replaceWith('<select style="width: 60%;" id="node-input-'+property+'"></select>');
         updateConfigNodeSelect(property,type,node[property]);
         var select = $("#node-input-"+property);
-        select.after(' <a id="node-input-lookup-'+property+'" class="btn"><i class="fa fa-pencil"></i></a>');
+        select.after(' <a id="node-input-lookup-'+property+'" class="editor-button"><i class="fa fa-pencil"></i></a>');
         $('#node-input-lookup-'+property).click(function(e) {
             showEditConfigNodeDialog(property,type,select.find(":selected").val());
             e.preventDefault();
@@ -390,7 +392,7 @@ RED.editor = (function() {
         input.val(node[property]);
         input.attr("type","hidden");
 
-        var button = $("<a>",{id:"node-input-edit-"+property, class:"btn"});
+        var button = $("<a>",{id:"node-input-edit-"+property, class:"editor-button"});
         input.after(button);
 
         if (node[property]) {
@@ -518,7 +520,8 @@ RED.editor = (function() {
         for (var d in definition.defaults) {
             if (definition.defaults.hasOwnProperty(d)) {
                 if (definition.defaults[d].type) {
-                    if (definition.defaults[d].exclusive) {
+                    var configTypeDef = RED.nodes.getType(definition.defaults[d].type);
+                    if (configTypeDef && configTypeDef.exclusive) {
                         prepareConfigNodeButton(node,d,definition.defaults[d].type);
                     } else {
                         prepareConfigNodeSelect(node,d,definition.defaults[d].type);
